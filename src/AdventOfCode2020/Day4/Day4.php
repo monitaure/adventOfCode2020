@@ -33,44 +33,40 @@ class Day4 extends AOCCommand
     {
         $passports = $this->getPassports($input);
 
-        $rulesPart1 = [
-            'byr' => fn() => true,
-            'iyr' => fn() => true,
-            'eyr' => fn() => true,
-            'hgt' => fn() => true,
-            'hcl' => fn() => true,
-            'ecl' => fn() => true,
-            'pid' => fn() => true,
-        ];
-        $countPart1 = $this->validatePassports($passports, $rulesPart1);
+        $requiredRule = new Rule(fn ($value) => true);
+        $rulesetPart1 = new Ruleset([
+            'byr' => $requiredRule,
+            'iyr' => $requiredRule,
+            'eyr' => $requiredRule,
+            'hgt' => $requiredRule,
+            'hcl' => $requiredRule,
+            'ecl' => $requiredRule,
+            'pid' => $requiredRule,
+        ]);
+        $countPart1 = $rulesetPart1->validate($passports);
         $this->output->writeln("- part 1: $countPart1");
-    }
 
-    private function validatePassports(array $passports, array $rules): int
-    {
-        $validationCount = 0;
-        foreach ($passports as $passport) {
-            $validationCount += $this->validatePassport($passport, $rules) ? 1 : 0;
-        }
-        return $validationCount;
-    }
-
-    private function validatePassport(array $passport, array $rules): bool
-    {
-        $valid = true;
-        foreach ($rules as $rule => $validate) {
-            if (!isset($passport[$rule])) {
-                $valid = false;
-                continue;
+        $rulesetPart2 = new Ruleset();
+        $rulesetPart2->add('byr', new Rule(fn($value) => is_numeric($value) && (int)$value >= 1920 && (int)$value <= 2002));
+        $rulesetPart2->add('iyr', new Rule(fn($value) => is_numeric($value) && (int)$value >= 2010 && (int)$value <= 2020));
+        $rulesetPart2->add('eyr', new Rule(fn($value) => is_numeric($value) && (int)$value >= 2020 && (int)$value <= 2030));
+        $rulesetPart2->add('hgt', new Rule(function ($value) {
+            $matches = [];
+            if (!preg_match('/^(\d+)(in|cm)$/', $value, $matches)) {
+                return false;
             }
 
-            $validation = $validate($passport[$rule]);
-
-            if ($validation === false) {
-                $valid = false;
-            }
-        }
-
-        return $valid;
+            [,$height, $unit] = $matches;
+            return match ($unit) {
+                'cm' => (int)$height >= 150 && (int)$height <= 193,
+                'in' => (int)$height >= 59 && (int)$height <= 76,
+                default => false
+            };
+        }));
+        $rulesetPart2->add('hcl', new Rule(fn ($value) => preg_match('/^#([0-9a-f]{6})$/', $value) === 1));
+        $rulesetPart2->add('ecl', new Rule(fn ($value) => match ($value) {'amb', 'blu', 'brn', 'gry', 'grn', 'hzl', 'oth' => true, default => false}));
+        $rulesetPart2->add('pid', new Rule(fn ($value) => preg_match('/^\d{9}$/', $value) === 1));
+        $countPart2 = $rulesetPart2->validate($passports);
+        $this->output->writeln("- part 2: $countPart2");
     }
 }
